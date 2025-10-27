@@ -103,9 +103,15 @@ class DiffusionTrainer:
             if t % 100 == 0:
                 save_image(x, self.output_dir / f"sample_t{t}.png", normalize=True)
 
-        save_image(generated_images, self.output_dir / "final_samples.png", normalize=True, nrow=2)
+        save_image(x, self.output_dir / "final_samples.png", normalize=True, nrow=2)
         self.model.train()
         return x
+
+    def save_model(self) -> None:
+        """Save the model checkpoint."""
+        checkpoint_path = self.output_dir / "diffusion_model.pth"
+        torch.save(self.model.state_dict(), checkpoint_path)
+        print(f"Model saved to {checkpoint_path}")
 
 
 if __name__ == "__main__":
@@ -120,9 +126,15 @@ if __name__ == "__main__":
     print(f"Using device: {trainer.device}")
 
     print("Starting a training step...")
+    loss_bk = float("inf")
     for epoch in range(3):
         loss = trainer.train_step()
         print(f"Epoch {epoch + 1}, Loss: {loss:.4f}")
+
+        # Save the model if the loss has decreased
+        if loss < loss_bk:
+            trainer.save_model()
+            loss_bk = loss
 
         # Clear cache to free up memory
         torch.cuda.empty_cache()
